@@ -590,8 +590,8 @@ def main() -> int:
     (t.ASSETS / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"ok: {len(slices)} fatias renderizadas")
 
-    # dados do site interativo (GitHub Pages), se site/ existir
-    site = t.ROOT / "site"
+    # dados do site interativo (GitHub Pages publica a pasta docs/), se existir
+    site = t.ROOT / "docs"
     if site.is_dir():
         (site / "data.json").write_text(
             json.dumps(
@@ -611,7 +611,7 @@ def main() -> int:
             + "\n",
             encoding="utf-8",
         )
-        print(f"  site/data.json: {(site / 'data.json').stat().st_size:,} bytes")
+        print(f"  docs/data.json: {(site / 'data.json').stat().st_size:,} bytes")
     return 0
 
 
