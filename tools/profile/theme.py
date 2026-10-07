@@ -47,6 +47,24 @@ HUD_H = 8 * GRID_UNIT
 FILLER_H = 4 * GRID_UNIT
 FOOTER_H = 6 * GRID_UNIT
 
+# --- Mapa isometrico (M3) -------------------------------------------------
+# Grade 53 semanas x 7 dias de calendar.json projetada em losangos 2:1.
+# altura multipla de 80 -> grade/casca/brilho continuam atraves das emendas.
+MAP_H = 15 * GRID_UNIT
+ISO_TW = 28.0  # largura do tile
+ISO_TH = 14.0  # altura do tile (2:1)
+ISO_INSET = 0.06  # recuo para o vao entre tiles
+ISO_ELEV_MAX = 16.0  # relevo maximo (px) por dia de contribuicao
+MAP_SEED = 424242
+
+
+def shade(hexcolor: str, factor: float) -> str:
+    """Multiplica os canais de uma cor hex (factor >1 clareia, <1 escurece)."""
+    r, g, b = hex_to_rgb(hexcolor)
+    clamp = lambda c: max(0, min(255, round(c * factor)))  # noqa: E731
+    return f"#{clamp(r):02x}{clamp(g):02x}{clamp(b):02x}"
+
+
 # --- Fontes ---------------------------------------------------------------
 FONT_TITLE = "Cinzel"
 FONT_MONO = "JetBrains Mono"

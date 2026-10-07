@@ -2,6 +2,7 @@
 <p align="center">
 <img src="./assets/header.svg" width="100%" align="top">
 <img src="./assets/hud.svg" width="100%" align="top">
+<img src="./assets/map.svg" width="100%" align="top">
 <img src="./assets/body.svg" width="100%" align="top">
 <img src="./assets/footer.svg" width="100%" align="top">
 </p>

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import math
+import random
 from datetime import datetime, timezone
 from xml.sax.saxutils import escape as esc
 
@@ -310,6 +311,168 @@ def runes_block(x, y, count) -> str:
     ])
 
 
+def _iso(px_col: int, px_row: int, offx: float, offy: float) -> tuple[float, float]:
+    """Projeta (coluna, linha) da grade no plano isometrico 2:1."""
+    x = (px_col - px_row) * t.ISO_TW / 2 + offx
+    y = (px_col + px_row) * t.ISO_TH / 2 + offy
+    return x, y
+
+
+def _tile_polys(px: float, py: float, elev: float, inset: float):
+    """Vertices (topo, lado esq, lado dir) de um tile com relevo `elev`."""
+    hw = t.ISO_TW / 2 * (1 - inset)
+    hh = t.ISO_TH / 2 * (1 - inset)
+    rt = t.ISO_TH / 2 * (1 - inset)
+    cx = px
+    top = (cx, py - elev)
+    right = (cx + hw, py + rt - elev)
+    bottom = (cx, py + 2 * hh - elev)
+    left = (cx - hw, py + rt - elev)
+    top_face = [top, right, bottom, left]
+    left_base = (cx - hw, py + rt)
+    bottom_base = (cx, py + 2 * hh)
+    right_base = (cx + hw, py + rt)
+    left_face = [left, bottom, bottom_base, left_base]
+    right_face = [bottom, right, right_base, bottom_base]
+    return top_face, left_face, right_face
+
+
+def _poly(points, fill, *, stroke="none", sw=0, opacity=1.0, dash=None) -> str:
+    pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
+    dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
+    return (
+        f'<polygon points="{pts}" fill="{fill}" stroke="{stroke}" stroke-width="{sw}" '
+        f'opacity="{opacity}"{dash_attr}/>'
+    )
+
+
+def _grace(cx: float, cy: float, heat: float) -> str:
+    """Site of grace: facho vertical dourado sobre a face de um tile revelado."""
+    beam = 5 + 10 * heat
+    r = 1.6 + 2.4 * heat
+    top = cy - beam
+    return "".join([
+        f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{cx:.1f}" y2="{top:.1f}" '
+        f'stroke="{t.GRACE}" stroke-width="1.2" opacity="{0.35 + 0.45 * heat:.2f}"/>',
+        f'<circle cx="{cx:.1f}" cy="{top:.1f}" r="{r:.1f}" fill="{t.GRACE}" opacity="{0.55 + 0.4 * heat:.2f}" filter="url(#soft)"/>',
+        f'<circle cx="{cx:.1f}" cy="{top:.1f}" r="{r * 0.5:.1f}" fill="{t.GOLD_BRIGHT}"/>',
+    ])
+
+
+def map_slice(calendar: dict) -> str:
+    """M3 - Mapa Lands Between: grade isometrica com fog-of-war e gracas."""
+    h = t.MAP_H
+    weeks = calendar.get("grid") or []
+    if not weeks:
+        return svg(h, background(h) + rails(h))
+    cols, rows = len(weeks), 7
+    cells = [(c, r, weeks[c][r]) for c in range(cols) for r in range(rows)]
+    maxc = max((d.get("count", 0) for *_, d in cells), default=1) or 1
+
+    # centralizacao da grade iso na moldura
+    min_x = _iso(0, rows - 1, 0, 0)[0]
+    max_x = _iso(cols - 1, 0, 0, 0)[0]
+    offx = CXC - (min_x + max_x) / 2
+    field_h = (cols - 1 + rows - 1) * t.ISO_TH / 2 + t.ISO_TH
+    top_pad, bot_pad = 122, 34
+    offy = top_pad + max(0.0, (h - top_pad - bot_pad - field_h) / 2)
+
+    past = [d for *_, d in cells if not d.get("future")]
+    revealed = sum(1 for d in past if d.get("count", 0) > 0)
+    total_days = len(past)
+    recent = sum(d.get("count", 0) for *_, d in cells[-2 * 7:] if not d.get("future"))
+    pulse = max(2.6, min(6.0, 6.0 - recent / 40.0))
+
+    fog_top = t.mix(t.BG, t.MIST, 0.24)
+    parts = [background(h)]
+    # halo da Erdtree atras do campo, pulsando com a atividade recente
+    fy = offy + field_h / 2
+    parts.append(
+        f'<ellipse class="glowpulse" style="animation-duration:{pulse:.1f}s" '
+        f'cx="{CXC}" cy="{fy:.0f}" rx="330" ry="150" fill="url(#halo)" opacity="0.55"/>'
+    )
+
+    rng = random.Random(t.MAP_SEED)
+    n_decor = 130
+    decor: dict[tuple[int, int], list[tuple[float, float]]] = {}
+    for _ in range(n_decor):
+        c, r, d = cells[rng.randrange(len(cells))]
+        if d.get("future") or d.get("count", 0) == 0:
+            continue
+        fx = rng.uniform(-0.32, 0.32)
+        fy2 = rng.uniform(0.18, 0.82)
+        decor.setdefault((c, r), []).append((fx, fy2))
+
+    # painter's algorithm: fundo (col+row pequeno) primeiro
+    for c, r, d in sorted(cells, key=lambda t3: (t3[0] + t3[1], t3[0])):
+        px, py = _iso(c, r, offx, offy)
+        future = bool(d.get("future"))
+        count = d.get("count", 0)
+        heat = 0.0 if future else count / maxc
+        elev = 0.0 if future else round(t.ISO_ELEV_MAX * heat ** 0.62)
+        if future:
+            top_col = t.mix(t.BG, t.MIST, 0.07)
+            frame, b1, b2 = _tile_polys(px, py, 0, t.ISO_INSET)
+            parts.append(_poly(frame, top_col, stroke=t.MIST, sw=0.6, opacity=0.5, dash="3 4"))
+            continue
+        if count == 0:
+            top_col = fog_top
+        else:
+            ramp = t.mix(t.mix(t.BG, t.STAMINA_GREEN, 0.5), t.GOLD_BRIGHT, min(1.0, 0.22 + 0.85 * math.sqrt(heat)))
+            top_col = ramp
+        top_face, left_face, right_face = _tile_polys(px, py, elev, t.ISO_INSET)
+        edge = t.shade(top_col, 0.5)
+        if elev > 0:
+            parts.append(_poly(left_face, t.shade(top_col, 0.42), stroke=edge, sw=0.6))
+            parts.append(_poly(right_face, t.shade(top_col, 0.62), stroke=edge, sw=0.6))
+        parts.append(_poly(top_face, top_col, stroke=t.MIST if count == 0 else edge, sw=0.7, opacity=0.96, dash="3 3" if count == 0 else None))
+
+        if count > 0:
+            cx = px
+            cy = py + t.ISO_TH / 2 - elev - t.ISO_TH * 0.10
+            parts.append(_grace(cx, cy, min(1.0, heat * 1.6)))
+            for fx, fy2 in decor.get((c, r), []):
+                dx = cx + fx * t.ISO_TW * 0.5
+                dy = cy + (fy2 - 0.5) * t.ISO_TH * 0.6
+                parts.append(f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="0.9" fill="{t.GOLD_BRIGHT}" opacity="0.7"/>')
+
+    # legenda / cabecalho do mapa
+    parts.append(txt(t.RAIL_W + 28, 38, "THE LANDS BETWEEN", family=t.FONT_TITLE, weight=600, size=24, fill=t.GOLD_BRIGHT, spacing=3))
+    parts.append(txt(t.RAIL_W + 30, 58, "// 53 WEEKS CHARTED - ONE TILE PER DAY", family=t.FONT_MONO, size=12, fill=t.TEXT_DIM, spacing=1))
+    parts.append(txt(t.VIEW_W - t.RAIL_W - 28, 34, f"{revealed} / {total_days}", family=t.FONT_MONO, weight=700, size=22, fill=t.GOLD_BRIGHT, anchor="end"))
+    parts.append(txt(t.VIEW_W - t.RAIL_W - 28, 54, "DAYS REVEALED", family=t.FONT_MONO, size=11, fill=t.TEXT_DIM, anchor="end", spacing=2))
+    parts.append(f'<line x1="{t.RAIL_W + 24}" y1="72" x2="{t.VIEW_W - t.RAIL_W - 24}" y2="72" stroke="{t.GOLD_DIM}" stroke-width="1"/>')
+
+    legend = [
+        ("revealed", "REVEALED"),
+        ("fog", "FOG OF WAR"),
+        ("grace", "SITE OF GRACE"),
+    ]
+    ly = 98
+    lx = CXC - sum(18 + len(lbl) * 6.8 + 34 for _, lbl in legend) / 2
+    for kind, label in legend:
+        if kind == "grace":
+            parts.append(f'<circle cx="{lx:.1f}" cy="{ly}" r="4" fill="{t.GRACE}" filter="url(#glow)"/>')
+        elif kind == "fog":
+            parts.append(_poly([(lx, ly - 8), (lx + 8, ly), (lx, ly + 8), (lx - 8, ly)], fog_top, stroke=t.MIST, sw=0.8, dash="3 3"))
+        else:
+            parts.append(_poly(
+                [(lx, ly - 8), (lx + 8, ly), (lx, ly + 8), (lx - 8, ly)],
+                t.mix(t.mix(t.BG, t.STAMINA_GREEN, 0.5), t.GOLD_BRIGHT, 0.72),
+                stroke=t.GOLD_DIM, sw=0.8,
+            ))
+        parts.append(txt(lx + 16, ly + 4, label, family=t.FONT_MONO, size=11, fill=t.TEXT_DIM, spacing=1))
+        lx += 18 + len(label) * 6.8 + 34
+    parts.append(rails(h))
+
+    faces = t.embedded_faces(
+        (t.FONT_TITLE, 600, "THE LANDS BETWEEN"),
+        (t.FONT_MONO, 400, "WEEKS CHARTED ONE TILE PER DAY DAYS REVEALED REVEALED FOG OF WAR SITE OF GRACE /"),
+        (t.FONT_MONO, 700, str(revealed) + str(total_days)),
+    )
+    return svg(h, "".join(parts), faces=faces)
+
+
 def hud_slice(stats: dict) -> str:
     h = t.HUD_H
     year = datetime.now(timezone.utc).year
@@ -338,11 +501,13 @@ def hud_slice(stats: dict) -> str:
 
 def main() -> int:
     stats = json.loads((t.DATA / "stats.json").read_text())
+    calendar = json.loads((t.DATA / "calendar.json").read_text())
     name = stats.get("name") or stats.get("login", "TARNISHED")
 
     slices = {
         "header.svg": header(name),
         "hud.svg": hud_slice(stats),
+        "map.svg": map_slice(calendar),
         "body.svg": body_slice(),
         "footer.svg": footer(),
     }
@@ -352,7 +517,7 @@ def main() -> int:
 
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "slices": ["header.svg", "hud.svg", "body.svg", "footer.svg"],
+        "slices": ["header.svg", "hud.svg", "map.svg", "body.svg", "footer.svg"],
     }
     (t.ASSETS / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"ok: {len(slices)} fatias renderizadas")
