@@ -62,23 +62,44 @@ FONT_FILES: dict[tuple[str, int], Path] = {
 }
 
 
-def font_face(name: str, path: Path, weight: int = 400) -> str:
+def subset_font_b64(path: Path, text: str) -> str:
+    """Subseta a fonte para os glifos de `text` e devolve woff2 em base64."""
+    import base64
+    from io import BytesIO
+
+    from fontTools import subset
+
+    opts = subset.Options()
+    opts.flavor = "woff2"
+    opts.desubroutinize = True
+    opts.notdef_outline = True
+    opts.layout_features = ["kern", "liga"]
+    font = subset.load_font(str(path), opts)
+    sub = subset.Subsetter(options=opts)
+    sub.populate(text="".join(dict.fromkeys(text)) + " ")
+    sub.subset(font)
+    buf = BytesIO()
+    font.save(buf)
+    font.close()
+    return base64.b64encode(buf.getvalue()).decode("ascii")
+
+
+def font_face(name: str, weight: int = 400, text: str | None = None) -> str:
     """Bloco @font-face com a fonte embutida em base64 (SVG modo imagem nao
-    carrega recurso externo)."""
+    carrega recurso externo). Se `text` for dado, subseta para esses glifos."""
     import base64
 
-    data = base64.b64encode(path.read_bytes()).decode("ascii")
-    fmt = "woff2" if path.suffix == ".woff2" else "truetype"
-    mime = "font/woff2" if path.suffix == ".woff2" else "font/ttf"
+    path = FONT_FILES[(name, weight)]
+    data = subset_font_b64(path, text) if text is not None else base64.b64encode(path.read_bytes()).decode("ascii")
     return (
         f"@font-face{{font-family:'{name}';font-style:normal;font-weight:{weight};"
-        f"src:url(data:{mime};base64,{data}) format('{fmt}');}}"
+        f"src:url(data:font/woff2;base64,{data}) format('woff2');}}"
     )
 
 
-def font_faces(*keys: tuple[str, int]) -> str:
-    """Concatena @font-face das (familia, peso) pedidas."""
-    return "".join(font_face(name, FONT_FILES[(name, w)], w) for name, w in keys)
+def embedded_faces(*specs: tuple[str, int, str]) -> str:
+    """Concatena @font-face de (familia, peso, texto-usado)."""
+    return "".join(font_face(name, w, text) for name, w, text in specs)
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:

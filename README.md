@@ -1,5 +1,9 @@
 <!-- elden:start -->
-<!-- Console gerado por tools/profile/render.py - nao editar a mao. -->
+<p align="center">
+<img src="./assets/header.svg" width="100%" align="top">
+<img src="./assets/body.svg" width="100%" align="top">
+<img src="./assets/footer.svg" width="100%" align="top">
+</p>
 <!-- elden:end -->
 
 # Lucas  Moura
