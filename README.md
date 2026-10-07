@@ -1,3 +1,7 @@
+<!-- elden:start -->
+<!-- Console gerado por tools/profile/render.py - nao editar a mao. -->
+<!-- elden:end -->
+
 # Lucas  Moura
 
 Analista e Desenvolvedor Full Stack

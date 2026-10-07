@@ -1,0 +1,115 @@
+{
+  "login": "lucasmoura333",
+  "name": "Lucas Moura",
+  "member_since": "2023-10-09",
+  "followers": 10,
+  "public_repos": 10,
+  "total_stars": 5,
+  "total_forks": 0,
+  "pull_requests": 206,
+  "merged_prs": 176,
+  "contributions_all_time": 1800,
+  "contributions_year": 846,
+  "current_streak": 10,
+  "longest_streak": 20,
+  "languages": [
+    {
+      "name": "TypeScript",
+      "bytes": 414228,
+      "percent": 41.5
+    },
+    {
+      "name": "Python",
+      "bytes": 336440,
+      "percent": 33.7
+    },
+    {
+      "name": "HTML",
+      "bytes": 184101,
+      "percent": 18.5
+    },
+    {
+      "name": "CSS",
+      "bytes": 31402,
+      "percent": 3.1
+    },
+    {
+      "name": "JavaScript",
+      "bytes": 21224,
+      "percent": 2.1
+    },
+    {
+      "name": "Shell",
+      "bytes": 6713,
+      "percent": 0.7
+    },
+    {
+      "name": "Dockerfile",
+      "bytes": 2902,
+      "percent": 0.3
+    }
+  ],
+  "repos": [
+    {
+      "name": "agent-extension",
+      "url": "https://github.com/lucasmoura333/agent-extension",
+      "stars": 1,
+      "forks": 0
+    },
+    {
+      "name": "dicom-extractor",
+      "url": "https://github.com/lucasmoura333/dicom-extractor",
+      "stars": 1,
+      "forks": 0
+    },
+    {
+      "name": "prototipo-api-rag",
+      "url": "https://github.com/lucasmoura333/prototipo-api-rag",
+      "stars": 1,
+      "forks": 0
+    },
+    {
+      "name": "ai-shorts-pipeline",
+      "url": "https://github.com/lucasmoura333/ai-shorts-pipeline",
+      "stars": 1,
+      "forks": 0
+    },
+    {
+      "name": "cv-templates",
+      "url": "https://github.com/lucasmoura333/cv-templates",
+      "stars": 1,
+      "forks": 0
+    },
+    {
+      "name": "lucasmoura333",
+      "url": "https://github.com/lucasmoura333/lucasmoura333",
+      "stars": 0,
+      "forks": 0
+    },
+    {
+      "name": "solar-simulation",
+      "url": "https://github.com/lucasmoura333/solar-simulation",
+      "stars": 0,
+      "forks": 0
+    },
+    {
+      "name": "proposal-engine",
+      "url": "https://github.com/lucasmoura333/proposal-engine",
+      "stars": 0,
+      "forks": 0
+    },
+    {
+      "name": "odoo-erp-integration",
+      "url": "https://github.com/lucasmoura333/odoo-erp-integration",
+      "stars": 0,
+      "forks": 0
+    },
+    {
+      "name": "agent-skills",
+      "url": "https://github.com/lucasmoura333/agent-skills",
+      "stars": 0,
+      "forks": 0
+    }
+  ],
+  "fetched_at": "2026-10-07T14:48:36+00:00"
+}

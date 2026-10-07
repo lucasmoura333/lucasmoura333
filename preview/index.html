@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elden Console - preview</title>
+  <style>
+    :root { --bg: #0a0a0c; --mist: #3a3a45; --gold: #c8a15a; --text: #8a8578; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px 16px;
+      background: var(--bg); color: var(--text);
+      font: 13px/1.5 ui-monospace, "JetBrains Mono", monospace;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .note { max-width: 1012px; width: 100%; margin-bottom: 20px; color: var(--mist); }
+    .note b { color: var(--gold); font-weight: 600; }
+    .console { max-width: 1012px; width: 100%; }
+    /* imita o sandbox de <img> do GitHub: sem gaps, alinhado ao topo */
+    .console img { display: block; width: 100%; }
+    .slice-missing {
+      width: 100%; padding: 24px;
+      border: 1px dashed var(--mist); border-radius: 2px;
+      margin: 2px 0; color: var(--mist); text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <p class="note">
+    <b>Elden Console</b> - harness local que imita o sandbox de <code>&lt;img&gt;</code> do GitHub.
+    Fatias ausentes aparecem como placeholders. Ordem = ordem do README.
+  </p>
+
+  <div class="console" id="console"></div>
+
+  <script>
+    // ordem canonica das fatias do console (mesma do README)
+    const SLICES = ["header", "hud", "map", "footer"];
+    const consoleEl = document.getElementById("console");
+    for (const name of SLICES) {
+      const img = document.createElement("img");
+      img.src = `../assets/${name}.svg`;
+      img.alt = name;
+      img.align = "top";
+      img.onerror = () => {
+        const box = document.createElement("div");
+        box.className = "slice-missing";
+        box.textContent = `assets/${name}.svg - ainda nao gerado`;
+        consoleEl.replaceChild(box, img);
+      };
+      consoleEl.appendChild(img);
+    }
+  </script>
+</body>
+</html>
