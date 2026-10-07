@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elden Console — The Lands Between</title>
+  <meta name="description" content="Mapa isométrico interativo das contribuições — um tile por dia.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="frame">
+    <header class="top">
+      <h1>The Lands Between</h1>
+      <p class="tag">// ONE TILE PER DAY — HOVER A TILE TO READ ITS DATE</p>
+    </header>
+
+    <div class="controls">
+      <label class="field">YEAR
+        <select id="year" aria-label="Ano"></select>
+      </label>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="stage">
+      <svg id="map" viewBox="0 0 1200 560" preserveAspectRatio="xMidYMid meet" role="img"
+           aria-label="Mapa isométrico das contribuições"></svg>
+      <div id="tip" class="tip" hidden></div>
+    </div>
+
+    <div class="legend">
+      <span><i class="sw revealed"></i>REVEALED</span>
+      <span><i class="sw fog"></i>FOG OF WAR</span>
+      <span><i class="sw grace"></i>SITE OF GRACE</span>
+      <span class="hint">clique para fixar / clique de novo para soltar</span>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

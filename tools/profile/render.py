@@ -589,6 +589,29 @@ def main() -> int:
     }
     (t.ASSETS / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"ok: {len(slices)} fatias renderizadas")
+
+    # dados do site interativo (GitHub Pages), se site/ existir
+    site = t.ROOT / "site"
+    if site.is_dir():
+        (site / "data.json").write_text(
+            json.dumps(
+                {
+                    "login": stats.get("login"),
+                    "name": stats.get("name"),
+                    "today": calendar.get("today"),
+                    "days": calendar.get("days", {}),
+                    "stats": {k: stats.get(k) for k in (
+                        "contributions_year", "contributions_all_time",
+                        "current_streak", "longest_streak", "pull_requests",
+                    )},
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"  site/data.json: {(site / 'data.json').stat().st_size:,} bytes")
     return 0
 
 

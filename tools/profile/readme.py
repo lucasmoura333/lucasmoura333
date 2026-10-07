@@ -21,6 +21,7 @@ BLOCK = re.compile(r"<!-- elden:start -->.*?<!-- elden:end -->", re.S)
 # fatias clicaveis: a imagem vira link (GitHub permite <a> em volta do <img>)
 LINKS = {
     "banner.svg": "https://github.com/lucasmoura333?tab=repositories",
+    "map.svg": "https://lucasmoura333.github.io/lucasmoura333/",
 }
 
 
