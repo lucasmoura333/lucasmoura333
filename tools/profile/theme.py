@@ -51,6 +51,16 @@ FOOTER_H = 6 * GRID_UNIT
 FONT_TITLE = "Cinzel"
 FONT_MONO = "JetBrains Mono"
 
+# fontes OFL baixadas em fonts/ (subset acontece no render, por SVG)
+FONT_FILES: dict[tuple[str, int], Path] = {
+    (FONT_TITLE, 400): FONTS / "cinzel-latin-400-normal.woff2",
+    (FONT_TITLE, 600): FONTS / "cinzel-latin-600-normal.woff2",
+    (FONT_TITLE, 700): FONTS / "cinzel-latin-700-normal.woff2",
+    (FONT_MONO, 400): FONTS / "jetbrains-mono-latin-400-normal.woff2",
+    (FONT_MONO, 700): FONTS / "jetbrains-mono-latin-700-normal.woff2",
+    (FONT_MONO, 800): FONTS / "jetbrains-mono-latin-800-normal.woff2",
+}
+
 
 def font_face(name: str, path: Path, weight: int = 400) -> str:
     """Bloco @font-face com a fonte embutida em base64 (SVG modo imagem nao
@@ -64,6 +74,11 @@ def font_face(name: str, path: Path, weight: int = 400) -> str:
         f"@font-face{{font-family:'{name}';font-style:normal;font-weight:{weight};"
         f"src:url(data:{mime};base64,{data}) format('{fmt}');}}"
     )
+
+
+def font_faces(*keys: tuple[str, int]) -> str:
+    """Concatena @font-face das (familia, peso) pedidas."""
+    return "".join(font_face(name, FONT_FILES[(name, w)], w) for name, w in keys)
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
