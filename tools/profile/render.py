@@ -589,7 +589,6 @@ def main() -> int:
         print(f"  {fname}: {len(content):,} bytes")
 
     manifest = {
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "slices": ["banner.svg", "header.svg", "hud.svg", "map.svg", "body.svg", "trial.svg", "footer.svg"],
     }
     (t.ASSETS / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

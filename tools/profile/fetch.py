@@ -158,12 +158,10 @@ def fetch_github(token: str) -> tuple[dict, dict]:
             {"name": r["name"], "url": r["url"], "stars": r["stargazerCount"], "forks": r["forkCount"]}
             for r in sorted(repos, key=lambda r: r["stargazerCount"], reverse=True)
         ],
-        "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
 
     grid = build_grid(days, today)
     calendar = {
-        "generated_at": stats["fetched_at"],
         "today": today.isoformat(),
         "days": days,
         "grid": grid,
@@ -220,6 +218,7 @@ def main() -> int:
     try:
         new_stats, new_calendar = fetch_github(resolve_token())
         stats.update(new_stats)
+        stats.pop("fetched_at", None)
         calendar = new_calendar
     except Exception as ex:  # noqa: BLE001
         warn(f"GitHub fetch falhou, mantendo dados anteriores: {ex}")

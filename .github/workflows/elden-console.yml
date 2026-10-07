@@ -1,0 +1,53 @@
+name: Elden Console
+
+# Atualiza o perfil: busca os numeros do GitHub, redesenha as fatias SVG e
+# reescreve o bloco do README. So commita se algo realmente mudou.
+#
+# Obs.: workflows agendados (cron) so rodam a partir da branch default. Enquanto
+# isto estiver na `feat/elden-console`, use o "Run workflow" (workflow_dispatch)
+# ou faca o merge na default para o cron valer.
+on:
+  schedule:
+    - cron: "17 */6 * * *" # a cada 6h, no minuto 17
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: elden-console
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install --disable-pip-version-check fonttools brotli
+
+      - name: Buscar dados + renderizar + README
+        env:
+          # Fine-grained PAT somente leitura (dados publicos). Ver docs do projeto.
+          PROFILE_TOKEN: ${{ secrets.PROFILE_TOKEN }}
+        run: |
+          python tools/profile/fetch.py
+          python tools/profile/render.py
+          python tools/profile/readme.py
+
+      - name: Commitar se mudou
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "sem mudancas"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(elden-console): refresh automatico"
+          git push
