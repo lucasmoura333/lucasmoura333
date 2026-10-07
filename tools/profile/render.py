@@ -14,6 +14,7 @@ Truques de emenda:
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime, timezone
 from xml.sax.saxutils import escape as esc
 
@@ -256,12 +257,92 @@ def footer() -> str:
     return svg(h, "".join(parts))
 
 
+def stat_bar(x, y, w, frac, color, label, value, sub) -> str:
+    h = 14
+    frac = max(0.02, min(1.0, frac))
+    out = [
+        txt(x, y - 10, label, family=t.FONT_TITLE, weight=600, size=15, fill=t.GOLD, spacing=2),
+        txt(x + w, y - 10, value, family=t.FONT_MONO, weight=700, size=15, fill=t.TEXT, anchor="end"),
+        f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{t.BG_PANEL}" stroke="{t.GOLD_DIM}" stroke-width="1"/>',
+        f'<rect x="{x}" y="{y}" width="{w * frac:.0f}" height="{h}" fill="{color}" opacity="0.85" filter="url(#soft)"/>',
+        f'<rect x="{x}" y="{y}" width="{w * frac:.0f}" height="{h}" fill="{color}"/>',
+    ]
+    step = w / 10
+    for i in range(1, 10):
+        out.append(
+            f'<line x1="{x + step * i:.0f}" y1="{y}" x2="{x + step * i:.0f}" y2="{y + h}" '
+            f'stroke="{t.BG}" stroke-width="1" opacity="0.45"/>'
+        )
+    out.append(f'<path d="M {x - 12} {y + h / 2} L {x - 6} {y} L {x} {y + h / 2} L {x - 6} {y + h} Z" fill="{t.GRACE}"/>')
+    out.append(txt(x, y + h + 18, sub, family=t.FONT_MONO, size=11, fill=t.TEXT_DIM))
+    return "".join(out)
+
+
+def compass(cx, cy, r, progress) -> str:
+    out = [
+        f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{t.BG_PANEL}" stroke="{t.GOLD_DIM}" stroke-width="1.5"/>',
+        f'<circle cx="{cx}" cy="{cy}" r="{r - 7}" fill="none" stroke="{t.GOLD_DIM}" stroke-width="0.7" opacity="0.6"/>',
+    ]
+    for letter, ax, ay in [("N", 0, -1), ("E", 1, 0), ("S", 0, 1), ("W", -1, 0)]:
+        lx = cx + ax * (r - 17)
+        ly = cy + ay * (r - 17) + 5
+        out.append(txt(lx, ly, letter, family=t.FONT_TITLE, weight=600, size=13, fill=t.GOLD, anchor="middle"))
+    angle = -90 + max(0.0, min(1.0, progress)) * 360
+    out.append(
+        f'<g transform="rotate({angle:.1f} {cx} {cy})">'
+        f'<path d="M {cx} {cy - r + 9} L {cx - 5} {cy} L {cx + 5} {cy} Z" fill="{t.GRACE}" filter="url(#glow)"/>'
+        f'<line x1="{cx}" y1="{cy}" x2="{cx}" y2="{cy + r - 9}" stroke="{t.GOLD_DIM}" stroke-width="2"/></g>'
+    )
+    out.append(f'<circle cx="{cx}" cy="{cy}" r="3.5" fill="{t.GOLD_BRIGHT}"/>')
+    return "".join(out)
+
+
+def runes_block(x, y, count) -> str:
+    gx = x - 200
+    return "".join([
+        f'<circle cx="{gx}" cy="{y}" r="18" fill="none" stroke="{t.GRACE}" stroke-width="1.8" filter="url(#glow)"/>',
+        f'<line x1="{gx}" y1="{y - 26}" x2="{gx}" y2="{y + 26}" stroke="{t.GOLD_DIM}" stroke-width="1.4"/>',
+        f'<line x1="{gx - 13}" y1="{y - 20}" x2="{gx + 13}" y2="{y + 20}" stroke="{t.GOLD_DIM}" stroke-width="1.4"/>',
+        f'<line x1="{gx + 13}" y1="{y - 20}" x2="{gx - 13}" y2="{y + 20}" stroke="{t.GOLD_DIM}" stroke-width="1.4"/>',
+        f'<circle cx="{gx}" cy="{y}" r="3" fill="{t.GRACE}"/>',
+        txt(x, y + 4, t.fmt_int(count), family=t.FONT_TITLE, weight=600, size=40, fill=t.GOLD_BRIGHT, anchor="end"),
+        txt(x, y + 30, "RUNES", family=t.FONT_MONO, size=12, fill=t.TEXT_DIM, anchor="end", spacing=3),
+    ])
+
+
+def hud_slice(stats: dict) -> str:
+    h = t.HUD_H
+    year = datetime.now(timezone.utc).year
+    prs = stats.get("pull_requests", 0)
+    year_contrib = stats.get("contributions_year", 0)
+    all_time = stats.get("contributions_all_time", 0)
+    cur = stats.get("current_streak", 0)
+    longest = stats.get("longest_streak", 0) or 1
+
+    faces = t.embedded_faces(
+        (t.FONT_TITLE, 600, "HP FP STAMINA N E S W RUNES"),
+        (t.FONT_MONO, 700, t.fmt_int(all_time) + str(prs) + t.fmt_int(year_contrib)),
+        (t.FONT_MONO, 400, f"{cur}d streak record {longest}d contributions pull requests {year}"),
+    )
+    parts = [background(h)]
+    bx, bw = 120, 300
+    parts.append(stat_bar(bx, 78, bw, year_contrib / 1000, t.BLOOD_BRIGHT, "HP", t.fmt_int(year_contrib), f"contributions {year}"))
+    parts.append(stat_bar(bx, 150, bw, prs / 250, t.FP_BLUE, "FP", str(prs), "pull requests"))
+    parts.append(stat_bar(bx, 222, bw, cur / longest, t.STAMINA_GREEN, "STAMINA", f"{cur}d", f"streak (record {longest}d)"))
+    doy = datetime.now(timezone.utc).timetuple().tm_yday
+    parts.append(compass(600, 150, 52, doy / 365))
+    parts.append(runes_block(1096, 150, all_time))
+    parts.append(rails(h))
+    return svg(h, "".join(parts), faces=faces)
+
+
 def main() -> int:
     stats = json.loads((t.DATA / "stats.json").read_text())
     name = stats.get("name") or stats.get("login", "TARNISHED")
 
     slices = {
         "header.svg": header(name),
+        "hud.svg": hud_slice(stats),
         "body.svg": body_slice(),
         "footer.svg": footer(),
     }
@@ -271,7 +352,7 @@ def main() -> int:
 
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "slices": ["header.svg", "body.svg", "footer.svg"],
+        "slices": ["header.svg", "hud.svg", "body.svg", "footer.svg"],
     }
     (t.ASSETS / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"ok: {len(slices)} fatias renderizadas")
