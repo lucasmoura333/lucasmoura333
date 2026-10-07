@@ -44,6 +44,14 @@
   <stop offset="0.5" stop-color="#f2d06b" stop-opacity="0.5"/>
   <stop offset="1" stop-color="#f2d06b" stop-opacity="0"/>
 </radialGradient>
+<linearGradient id="fadeTop" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#0a0a0c" stop-opacity="0.92"/>
+  <stop offset="1" stop-color="#0a0a0c" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="fadeBottom" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#0a0a0c" stop-opacity="0"/>
+  <stop offset="1" stop-color="#0a0a0c" stop-opacity="1"/>
+</linearGradient>
 </defs><rect width="1200" height="560" fill="#0a0a0c"/><rect width="1200" height="560" fill="url(#grid)" opacity="0.55"/><ellipse cx="600" cy="280" rx="432" ry="336" fill="url(#halo)" opacity="0.5"/>
 <rect x="56" y="0" width="1088" height="44" fill="#1c1812"/>
 <line x1="56" y1="44" x2="1144" y2="44" stroke="#c8a15a" stroke-width="2"/>

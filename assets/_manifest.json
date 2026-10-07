@@ -1,10 +1,12 @@
 {
-  "generated_at": "2026-10-07T15:24:59+00:00",
+  "generated_at": "2026-10-07T18:43:03+00:00",
   "slices": [
+    "banner.svg",
     "header.svg",
     "hud.svg",
     "map.svg",
     "body.svg",
+    "trial.svg",
     "footer.svg"
   ]
 }

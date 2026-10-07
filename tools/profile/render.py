@@ -78,6 +78,14 @@ def defs() -> str:
   <stop offset="0.5" stop-color="{t.GOLD_BRIGHT}" stop-opacity="0.5"/>
   <stop offset="1" stop-color="{t.GOLD_BRIGHT}" stop-opacity="0"/>
 </radialGradient>
+<linearGradient id="fadeTop" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="{t.BG}" stop-opacity="0.92"/>
+  <stop offset="1" stop-color="{t.BG}" stop-opacity="0"/>
+</linearGradient>
+<linearGradient id="fadeBottom" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="{t.BG}" stop-opacity="0"/>
+  <stop offset="1" stop-color="{t.BG}" stop-opacity="1"/>
+</linearGradient>
 """
 
 
@@ -178,12 +186,14 @@ def erdtree(cx: int, top: int, base: int) -> str:
     return "".join(out)
 
 
-def txt(x, y, s, *, family=t.FONT_MONO, weight=400, size=16, fill=t.TEXT, anchor="start", spacing=0, cls="", opacity=1.0):
+def txt(x, y, s, *, family=t.FONT_MONO, weight=400, size=16, fill=t.TEXT, anchor="start", spacing=0, cls="", opacity=1.0, filter=None, style=None):
     klass = f' class="{cls}"' if cls else ""
+    filt = f' filter="{filter}"' if filter else ""
+    sty = f' style="{style}"' if style else ""
     return (
         f'<text x="{x}" y="{y}" font-family="\'{family}\', monospace" font-weight="{weight}" '
         f'font-size="{size}" fill="{fill}" text-anchor="{anchor}" letter-spacing="{spacing}" '
-        f'opacity="{opacity}"{klass}>{esc(s)}</text>'
+        f'opacity="{opacity}"{klass}{filt}{sty}>{esc(s)}</text>'
     )
 
 
@@ -499,16 +509,79 @@ def hud_slice(stats: dict) -> str:
     return svg(h, "".join(parts), faces=faces)
 
 
+def banner() -> str:
+    """M4 - tela de titulo: Vale Gotico (fundo) + cavaleiro (frente, parallax)."""
+    h = t.BANNER_H
+    year = datetime.now(timezone.utc).year
+    parts = [
+        background(h),
+        f'<image href="{t.image_data_uri("banner_valley.png")}" x="0" y="0" '
+        f'width="{t.VIEW_W}" height="{h}" preserveAspectRatio="none"/>',
+        f'<rect width="{t.VIEW_W}" height="{h}" fill="{t.BG}" opacity="0.12"/>',
+        f'<image href="{t.image_data_uri("banner_knight.png")}" x="0" y="0" '
+        f'width="{t.VIEW_W}" height="{h}" preserveAspectRatio="none"/>',
+        f'<rect x="0" y="{h - 200}" width="{t.VIEW_W}" height="200" fill="url(#fadeBottom)"/>',
+        f'<rect x="0" y="{h - 6}" width="{t.VIEW_W}" height="6" fill="{t.BG}"/>',
+        f'<rect width="{t.VIEW_W}" height="96" fill="url(#fadeTop)"/>',
+        f'<rect width="{t.VIEW_W}" height="6" fill="{t.BG}"/>',
+    ]
+    y_prompt = h - 78
+    parts.append(txt(t.RAIL_W + 22, 34, "// ELDEN CONSOLE", family=t.FONT_MONO, size=12, fill=t.TEXT_DIM, spacing=1))
+    parts.append(txt(t.VIEW_W - t.RAIL_W - 22, 34, f"LANDS BETWEEN // {year}", family=t.FONT_MONO, size=12, fill=t.TEXT_DIM, anchor="end", spacing=1))
+    parts.append(txt(CXC, y_prompt, "PRESS ANY BUTTON", family=t.FONT_TITLE, weight=600, size=24, fill=t.GOLD_BRIGHT, anchor="middle", spacing=7, cls="blink-slow"))
+    parts.append(txt(CXC, y_prompt + 30, "// NEW GAME     CONTINUE     SETTINGS", family=t.FONT_MONO, size=12, fill=t.TEXT_DIM, anchor="middle", spacing=2))
+    parts.append(rails(h))
+    faces = t.embedded_faces(
+        (t.FONT_TITLE, 600, "PRESS ANY BUTTON"),
+        (t.FONT_MONO, 400, f"// ELDEN CONSOLE LANDS BETWEEN {year} // NEW GAME CONTINUE SETTINGS"),
+    )
+    css = "@keyframes blinkslow{0%,100%{opacity:.4}50%{opacity:1}}.blink-slow{animation:blinkslow 2.4s ease-in-out infinite}"
+    return svg(h, "".join(parts), faces=faces, css=css)
+
+
+def trial() -> str:
+    """M4 - tela de morte/vitoria: YOU DIED ~ ENEMY FELLED (crossfade)."""
+    h = t.TRIAL_H
+    cy = h / 2 + 10
+    bar = 30
+    parts = [background(h)]
+    parts.append(f'<image href="{t.image_data_uri("trial_forest.png")}" x="0" y="0" '
+                 f'width="{t.VIEW_W}" height="{h}" preserveAspectRatio="none" opacity="0.55"/>')
+    parts.append(f'<rect width="{t.VIEW_W}" height="{h}" fill="{t.BG}" opacity="0.5"/>')
+    parts.append(f'<rect width="{t.VIEW_W}" height="{bar}" fill="{t.BG}" opacity="0.85"/>')
+    parts.append(f'<rect x="0" y="{h - bar}" width="{t.VIEW_W}" height="{bar}" fill="{t.BG}" opacity="0.85"/>')
+    for cls, label, col in (("trialA", "YOU DIED", t.BLOOD_BRIGHT), ("trialB", "ENEMY FELLED", t.GOLD_BRIGHT)):
+        parts.append(
+            f'<g class="{cls}">'
+            + txt(CXC, cy, label, family=t.FONT_TITLE, weight=700, size=54, fill=col, anchor="middle", spacing=12, filter="url(#glow)", opacity=0.7)
+            + txt(CXC, cy, label, family=t.FONT_TITLE, weight=700, size=54, fill=col, anchor="middle", spacing=12)
+            + "</g>"
+        )
+    parts.append(txt(CXC, h - 9, "// DEATH IS NOT THE END", family=t.FONT_MONO, size=11, fill=t.TEXT_DIM, anchor="middle", spacing=2))
+    parts.append(rails(h))
+    faces = t.embedded_faces(
+        (t.FONT_TITLE, 700, "YOU DIED ENEMY FELLED"),
+        (t.FONT_MONO, 400, "// DEATH IS NOT THE END"),
+    )
+    css = ("@keyframes trialA{0%,38%{opacity:1}48%,100%{opacity:0}}"
+           "@keyframes trialB{0%,48%{opacity:0}58%,90%{opacity:1}100%{opacity:0}}"
+           ".trialA{animation:trialA 9s ease-in-out infinite}"
+           ".trialB{animation:trialB 9s ease-in-out infinite}")
+    return svg(h, "".join(parts), faces=faces, css=css)
+
+
 def main() -> int:
     stats = json.loads((t.DATA / "stats.json").read_text())
     calendar = json.loads((t.DATA / "calendar.json").read_text())
     name = stats.get("name") or stats.get("login", "TARNISHED")
 
     slices = {
+        "banner.svg": banner(),
         "header.svg": header(name),
         "hud.svg": hud_slice(stats),
         "map.svg": map_slice(calendar),
         "body.svg": body_slice(),
+        "trial.svg": trial(),
         "footer.svg": footer(),
     }
     for fname, content in slices.items():
@@ -517,7 +590,7 @@ def main() -> int:
 
     manifest = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "slices": ["header.svg", "hud.svg", "map.svg", "body.svg", "footer.svg"],
+        "slices": ["banner.svg", "header.svg", "hud.svg", "map.svg", "body.svg", "trial.svg", "footer.svg"],
     }
     (t.ASSETS / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"ok: {len(slices)} fatias renderizadas")

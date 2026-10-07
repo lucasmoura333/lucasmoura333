@@ -6,12 +6,16 @@ inspirada no clima de Elden Ring - nenhum asset oficial e usado.
 
 from __future__ import annotations
 
+from base64 import b64encode
+from functools import lru_cache
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+_HERE = Path(__file__).resolve().parent
+ROOT = _HERE.parents[1]
 ASSETS = ROOT / "assets"
-DATA = Path(__file__).resolve().parent / "data"
-FONTS = Path(__file__).resolve().parent / "fonts"
+DATA = _HERE / "data"
+FONTS = _HERE / "fonts"
+IMG = _HERE / "img"
 
 # --- Paleta ---------------------------------------------------------------
 BG = "#0a0a0c"
@@ -46,6 +50,11 @@ HEADER_H = 14 * GRID_UNIT
 HUD_H = 8 * GRID_UNIT
 FILLER_H = 4 * GRID_UNIT
 FOOTER_H = 6 * GRID_UNIT
+
+# M4 - banner (estabelecendo) e trial (YOU DIED / ENEMY FELLED)
+# banner casa 2.5:1 com as artes de origem (1983x793); trial e uma faixa.
+BANNER_H = 12 * GRID_UNIT
+TRIAL_H = 6 * GRID_UNIT
 
 # --- Mapa isometrico (M3) -------------------------------------------------
 # Grade 53 semanas x 7 dias de calendar.json projetada em losangos 2:1.
@@ -118,6 +127,13 @@ def font_face(name: str, weight: int = 400, text: str | None = None) -> str:
 def embedded_faces(*specs: tuple[str, int, str]) -> str:
     """Concatena @font-face de (familia, peso, texto-usado)."""
     return "".join(font_face(name, w, text) for name, w, text in specs)
+
+
+@lru_cache(maxsize=None)
+def image_data_uri(name: str) -> str:
+    """PNG de `img/` embutido em base64 (SVG modo imagem nao carrega externo)."""
+    data = b64encode((IMG / name).read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{data}"
 
 
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
