@@ -1,8 +1,7 @@
 {
   "slices": [
-    "banner.svg",
     "header.svg",
-    "hud.svg",
+    "banner.svg",
     "map.svg",
     "body.svg",
     "trial.svg",

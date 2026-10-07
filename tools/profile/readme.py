@@ -18,11 +18,19 @@ README = t.ROOT / "README.md"
 MANIFEST = t.ASSETS / "_manifest.json"
 BLOCK = re.compile(r"<!-- elden:start -->.*?<!-- elden:end -->", re.S)
 
+# fatias clicaveis: a imagem vira link (GitHub permite <a> em volta do <img>)
+LINKS = {
+    "banner.svg": "https://github.com/lucasmoura333?tab=repositories",
+}
+
 
 def writing_block(slices: list[str]) -> str:
-    imgs = "\n".join(
-        f'<img src="./assets/{name}" width="100%" align="top">' for name in slices
-    )
+    rows = []
+    for name in slices:
+        img = f'<img src="./assets/{name}" width="100%" align="top">'
+        url = LINKS.get(name)
+        rows.append(f'<a href="{url}">{img}</a>' if url else img)
+    imgs = "\n".join(rows)
     return f'<!-- elden:start -->\n<p align="center">\n{imgs}\n</p>\n<!-- elden:end -->'
 
 

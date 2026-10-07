@@ -46,7 +46,7 @@ RAIL_W = 56
 PAD = 40
 
 # alturas nomeadas (multiplos de GRID_UNIT)
-HEADER_H = 14 * GRID_UNIT
+HEADER_H = 16 * GRID_UNIT
 HUD_H = 8 * GRID_UNIT
 FILLER_H = 4 * GRID_UNIT
 FOOTER_H = 6 * GRID_UNIT

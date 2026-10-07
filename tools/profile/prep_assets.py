@@ -15,7 +15,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageFilter
+from PIL import Image, ImageChops, ImageFilter
 
 HERE = Path(__file__).resolve().parent
 IMG = HERE / "img"
@@ -24,6 +24,7 @@ SRC_DEFAULT = Path("/mnt/d/hub")
 VALLEY = "*Sobre o Vale*"
 KNIGHT = "Cavaleiro*Penhasco*"
 FOREST = "Floresta*Pixel Art*"
+TREE = "*Luminosa*"
 
 
 def _find(src_dir: Path, pattern: str) -> Path:
@@ -69,6 +70,21 @@ def key_light_alpha(src: Image.Image, blur: int = 5, threshold: int = 150, gain:
     return out
 
 
+def key_saturation_alpha(src: Image.Image, cut: int = 5, gain: float = 3.0) -> Image.Image:
+    """Transparencia = saturacao do pixel.
+
+    Para artes claras sobre fundo neutro/xadrez (ex.: a Erdtree dourada sobre
+    cinza): o fundo e acromatico (saturacao ~0) e a arte e colorida.
+    """
+    r, g, b = src.convert("RGB").split()
+    mx = ImageChops.lighter(ImageChops.lighter(r, g), b)
+    mn = ImageChops.darker(ImageChops.darker(r, g), b)
+    sat = ImageChops.subtract(mx, mn)
+    alpha = sat.point(lambda v: max(0, min(255, int((v - cut) * gain))))
+    out = src.convert("RGBA")
+    out.putalpha(alpha)
+    return out
+
 def save(img: Image.Image, name: str, *, colors: int | None = None) -> None:
     IMG.mkdir(parents=True, exist_ok=True)
     if colors is not None:
@@ -92,6 +108,10 @@ def main(argv: list[str]) -> int:
     keyed = key_light_alpha(forest).resize((1200, 480), Image.LANCZOS)
     band = keyed.crop((0, 140, 1200, 380))
     save(band, "trial_forest.png", colors=32)
+
+    tree = Image.open(_find(src_dir, TREE))
+    tree = key_saturation_alpha(tree).resize((360, 379), Image.LANCZOS)
+    save(tree, "header_erdtree.png", colors=48)
     return 0
 
 

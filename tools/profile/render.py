@@ -197,28 +197,47 @@ def txt(x, y, s, *, family=t.FONT_MONO, weight=400, size=16, fill=t.TEXT, anchor
     )
 
 
-def header(name: str) -> str:
+def header(name: str, stats: dict) -> str:
     h = t.HEADER_H
     title = name.upper()
     sub = "TARNISHED // FULL STACK DEVELOPER"
     tag = "// SAAS | APIS | INTEGRACOES | AUTOMACAO"
     prompt = "$ whoami"
+    year = datetime.now(timezone.utc).year
+    prs = stats.get("pull_requests", 0)
+    year_contrib = stats.get("contributions_year", 0)
+    all_time = stats.get("contributions_all_time", 0)
+    cur = stats.get("current_streak", 0)
+    longest = stats.get("longest_streak", 0) or 1
     faces = t.embedded_faces(
         (t.FONT_TITLE, 700, title),
-        (t.FONT_MONO, 400, sub + tag + prompt),
+        (t.FONT_TITLE, 600, "HP FP STAMINA RUNES"),
+        (t.FONT_MONO, 400, sub + tag + prompt + f"contributions {year} pull requests streak record {longest}d"),
+        (t.FONT_MONO, 700, t.fmt_int(all_time) + str(prs) + t.fmt_int(year_contrib) + f"{cur}d"),
     )
-    body = [background(h), top_bar(), erdtree(CXC, 70, 250)]
-    # titulo (brilho atras + texto nítido)
-    body.append(txt(CXC, 336, title, family=t.FONT_TITLE, weight=700, size=76, fill=t.GOLD, anchor="middle", spacing=8, opacity=0.5))
-    body.append(txt(CXC, 336, title, family=t.FONT_TITLE, weight=700, size=76, fill=t.GOLD_BRIGHT, anchor="middle", spacing=8, cls="glowpulse"))
-    body.append(divider(392))
-    body.append(txt(CXC, 440, sub, family=t.FONT_MONO, size=17, fill=t.TEXT, anchor="middle", spacing=4))
-    body.append(txt(CXC, 468, tag, family=t.FONT_MONO, size=13, fill=t.TEXT_DIM, anchor="middle", spacing=2))
+    body = [background(h), top_bar()]
+    # Erdtree dourada (brilhante) ao fundo, com o pe na borda inferior
+    tw, th = 360, 379
+    body.append(
+        f'<image href="{t.image_data_uri("header_erdtree.png")}" x="{CXC - tw // 2}" y="{h - th}" '
+        f'width="{tw}" height="{th}" filter="url(#glow)" class="glowpulse"/>'
+    )
+    # nome no topo
+    body.append(txt(CXC, 150, title, family=t.FONT_TITLE, weight=700, size=76, fill=t.GOLD, anchor="middle", spacing=8, opacity=0.5))
+    body.append(txt(CXC, 150, title, family=t.FONT_TITLE, weight=700, size=76, fill=t.GOLD_BRIGHT, anchor="middle", spacing=8, cls="glowpulse"))
+    body.append(txt(CXC, 190, sub, family=t.FONT_MONO, size=17, fill=t.TEXT, anchor="middle", spacing=4))
+    body.append(txt(CXC, 214, tag, family=t.FONT_MONO, size=13, fill=t.TEXT_DIM, anchor="middle", spacing=2))
     # linha de terminal
-    ty = 524
+    ty = 246
     prompt_x = CXC - 96
     body.append(txt(prompt_x, ty, prompt, family=t.FONT_MONO, weight=700, size=18, fill=t.STAMINA_GREEN))
     body.append(f'<rect class="cursor" x="{prompt_x + 118}" y="{ty - 16}" width="11" height="20" fill="{t.GRACE}"/>')
+    # stats junto da arvore: HP/FP/Stamina a esquerda, runas a direita
+    bx, bw = 110, 270
+    body.append(stat_bar(bx, 372, bw, year_contrib / 1000, t.BLOOD_BRIGHT, "HP", t.fmt_int(year_contrib), f"contributions {year}"))
+    body.append(stat_bar(bx, 436, bw, prs / 250, t.FP_BLUE, "FP", str(prs), "pull requests"))
+    body.append(stat_bar(bx, 500, bw, cur / longest, t.STAMINA_GREEN, "STAMINA", f"{cur}d", f"streak (record {longest}d)"))
+    body.append(runes_block(1092, 470, all_time))
     body.append(rails(h))
     return svg(h, "".join(body), faces=faces)
 
@@ -369,6 +388,53 @@ def _grace(cx: float, cy: float, heat: float) -> str:
     ])
 
 
+def _map_tiles(weeks: list, maxc: int, offx: float, offy: float, *, decor_n: int = 130) -> str:
+    """Desenha os tiles iso (sem halo/cabecalho/legenda)."""
+    cols, rows = len(weeks), 7
+    cells = [(c, r, weeks[c][r]) for c in range(cols) for r in range(rows)]
+    fog_top = t.mix(t.BG, t.MIST, 0.24)
+    rng = random.Random(t.MAP_SEED)
+    decor: dict[tuple[int, int], list[tuple[float, float]]] = {}
+    for _ in range(decor_n):
+        c, r, d = cells[rng.randrange(len(cells))]
+        if d.get("future") or d.get("count", 0) == 0:
+            continue
+        decor.setdefault((c, r), []).append((rng.uniform(-0.32, 0.32), rng.uniform(0.18, 0.82)))
+    parts = []
+    # painter's algorithm: fundo (col+row pequeno) primeiro
+    for c, r, d in sorted(cells, key=lambda t3: (t3[0] + t3[1], t3[0])):
+        px, py = _iso(c, r, offx, offy)
+        future = bool(d.get("future"))
+        count = d.get("count", 0)
+        heat = 0.0 if future else count / maxc
+        elev = 0.0 if future else round(t.ISO_ELEV_MAX * heat ** 0.62)
+        if future:
+            top_col = t.mix(t.BG, t.MIST, 0.07)
+            frame, b1, b2 = _tile_polys(px, py, 0, t.ISO_INSET)
+            parts.append(_poly(frame, top_col, stroke=t.MIST, sw=0.6, opacity=0.5, dash="3 4"))
+            continue
+        if count == 0:
+            top_col = fog_top
+        else:
+            ramp = t.mix(t.mix(t.BG, t.STAMINA_GREEN, 0.5), t.GOLD_BRIGHT, min(1.0, 0.22 + 0.85 * math.sqrt(heat)))
+            top_col = ramp
+        top_face, left_face, right_face = _tile_polys(px, py, elev, t.ISO_INSET)
+        edge = t.shade(top_col, 0.5)
+        if elev > 0:
+            parts.append(_poly(left_face, t.shade(top_col, 0.42), stroke=edge, sw=0.6))
+            parts.append(_poly(right_face, t.shade(top_col, 0.62), stroke=edge, sw=0.6))
+        parts.append(_poly(top_face, top_col, stroke=t.MIST if count == 0 else edge, sw=0.7, opacity=0.96, dash="3 3" if count == 0 else None))
+        if count > 0:
+            cx = px
+            cy = py + t.ISO_TH / 2 - elev - t.ISO_TH * 0.10
+            parts.append(_grace(cx, cy, min(1.0, heat * 1.6)))
+            for fx, fy2 in decor.get((c, r), []):
+                dx = cx + fx * t.ISO_TW * 0.5
+                dy = cy + (fy2 - 0.5) * t.ISO_TH * 0.6
+                parts.append(f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="0.9" fill="{t.GOLD_BRIGHT}" opacity="0.7"/>')
+    return "".join(parts)
+
+
 def map_slice(calendar: dict) -> str:
     """M3 - Mapa Lands Between: grade isometrica com fog-of-war e gracas."""
     h = t.MAP_H
@@ -401,50 +467,7 @@ def map_slice(calendar: dict) -> str:
         f'<ellipse class="glowpulse" style="animation-duration:{pulse:.1f}s" '
         f'cx="{CXC}" cy="{fy:.0f}" rx="330" ry="150" fill="url(#halo)" opacity="0.55"/>'
     )
-
-    rng = random.Random(t.MAP_SEED)
-    n_decor = 130
-    decor: dict[tuple[int, int], list[tuple[float, float]]] = {}
-    for _ in range(n_decor):
-        c, r, d = cells[rng.randrange(len(cells))]
-        if d.get("future") or d.get("count", 0) == 0:
-            continue
-        fx = rng.uniform(-0.32, 0.32)
-        fy2 = rng.uniform(0.18, 0.82)
-        decor.setdefault((c, r), []).append((fx, fy2))
-
-    # painter's algorithm: fundo (col+row pequeno) primeiro
-    for c, r, d in sorted(cells, key=lambda t3: (t3[0] + t3[1], t3[0])):
-        px, py = _iso(c, r, offx, offy)
-        future = bool(d.get("future"))
-        count = d.get("count", 0)
-        heat = 0.0 if future else count / maxc
-        elev = 0.0 if future else round(t.ISO_ELEV_MAX * heat ** 0.62)
-        if future:
-            top_col = t.mix(t.BG, t.MIST, 0.07)
-            frame, b1, b2 = _tile_polys(px, py, 0, t.ISO_INSET)
-            parts.append(_poly(frame, top_col, stroke=t.MIST, sw=0.6, opacity=0.5, dash="3 4"))
-            continue
-        if count == 0:
-            top_col = fog_top
-        else:
-            ramp = t.mix(t.mix(t.BG, t.STAMINA_GREEN, 0.5), t.GOLD_BRIGHT, min(1.0, 0.22 + 0.85 * math.sqrt(heat)))
-            top_col = ramp
-        top_face, left_face, right_face = _tile_polys(px, py, elev, t.ISO_INSET)
-        edge = t.shade(top_col, 0.5)
-        if elev > 0:
-            parts.append(_poly(left_face, t.shade(top_col, 0.42), stroke=edge, sw=0.6))
-            parts.append(_poly(right_face, t.shade(top_col, 0.62), stroke=edge, sw=0.6))
-        parts.append(_poly(top_face, top_col, stroke=t.MIST if count == 0 else edge, sw=0.7, opacity=0.96, dash="3 3" if count == 0 else None))
-
-        if count > 0:
-            cx = px
-            cy = py + t.ISO_TH / 2 - elev - t.ISO_TH * 0.10
-            parts.append(_grace(cx, cy, min(1.0, heat * 1.6)))
-            for fx, fy2 in decor.get((c, r), []):
-                dx = cx + fx * t.ISO_TW * 0.5
-                dy = cy + (fy2 - 0.5) * t.ISO_TH * 0.6
-                parts.append(f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="0.9" fill="{t.GOLD_BRIGHT}" opacity="0.7"/>')
+    parts.append(_map_tiles(weeks, maxc, offx, offy))
 
     # legenda / cabecalho do mapa
     parts.append(txt(t.RAIL_W + 28, 38, "THE LANDS BETWEEN", family=t.FONT_TITLE, weight=600, size=24, fill=t.GOLD_BRIGHT, spacing=3))
@@ -480,32 +503,6 @@ def map_slice(calendar: dict) -> str:
         (t.FONT_MONO, 400, "WEEKS CHARTED ONE TILE PER DAY DAYS REVEALED REVEALED FOG OF WAR SITE OF GRACE /"),
         (t.FONT_MONO, 700, str(revealed) + str(total_days)),
     )
-    return svg(h, "".join(parts), faces=faces)
-
-
-def hud_slice(stats: dict) -> str:
-    h = t.HUD_H
-    year = datetime.now(timezone.utc).year
-    prs = stats.get("pull_requests", 0)
-    year_contrib = stats.get("contributions_year", 0)
-    all_time = stats.get("contributions_all_time", 0)
-    cur = stats.get("current_streak", 0)
-    longest = stats.get("longest_streak", 0) or 1
-
-    faces = t.embedded_faces(
-        (t.FONT_TITLE, 600, "HP FP STAMINA N E S W RUNES"),
-        (t.FONT_MONO, 700, t.fmt_int(all_time) + str(prs) + t.fmt_int(year_contrib)),
-        (t.FONT_MONO, 400, f"{cur}d streak record {longest}d contributions pull requests {year}"),
-    )
-    parts = [background(h)]
-    bx, bw = 120, 300
-    parts.append(stat_bar(bx, 78, bw, year_contrib / 1000, t.BLOOD_BRIGHT, "HP", t.fmt_int(year_contrib), f"contributions {year}"))
-    parts.append(stat_bar(bx, 150, bw, prs / 250, t.FP_BLUE, "FP", str(prs), "pull requests"))
-    parts.append(stat_bar(bx, 222, bw, cur / longest, t.STAMINA_GREEN, "STAMINA", f"{cur}d", f"streak (record {longest}d)"))
-    doy = datetime.now(timezone.utc).timetuple().tm_yday
-    parts.append(compass(600, 150, 52, doy / 365))
-    parts.append(runes_block(1096, 150, all_time))
-    parts.append(rails(h))
     return svg(h, "".join(parts), faces=faces)
 
 
@@ -576,9 +573,8 @@ def main() -> int:
     name = stats.get("name") or stats.get("login", "TARNISHED")
 
     slices = {
+        "header.svg": header(name, stats),
         "banner.svg": banner(),
-        "header.svg": header(name),
-        "hud.svg": hud_slice(stats),
         "map.svg": map_slice(calendar),
         "body.svg": body_slice(),
         "trial.svg": trial(),
@@ -589,7 +585,7 @@ def main() -> int:
         print(f"  {fname}: {len(content):,} bytes")
 
     manifest = {
-        "slices": ["banner.svg", "header.svg", "hud.svg", "map.svg", "body.svg", "trial.svg", "footer.svg"],
+        "slices": ["header.svg", "banner.svg", "map.svg", "body.svg", "trial.svg", "footer.svg"],
     }
     (t.ASSETS / "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"ok: {len(slices)} fatias renderizadas")
